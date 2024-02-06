@@ -5,10 +5,12 @@
 # @File        : interface.py
 # @Software    : Pycharm
 # @description : tkinter GUI控制界面base框架
-
+import time
 from pynput import keyboard
 import threading
 import tkinter as tk
+
+
 
 class InterfaceBase:
     def __init__(self, mouse, config):
@@ -25,7 +27,7 @@ class InterfaceBase:
         t = threading.Thread(target=self.keyboard)
         t.start()
 
-    def draw_windows(self, title: str, botton_name: list, botton_func: list):
+    def draw_windows(self, title: str, botton_name: list, botton_func: list, func_args: list=[]):
         botton_name.append('刷新小程序窗口位置')
         botton_func.append(self.detect_windows)
         botton_name.append('停止[ESC]')
@@ -54,8 +56,13 @@ class InterfaceBase:
 
         for i in range(len(botton_name)):
             self.y += self.gap
-            button = tk.Button(self.root, text=botton_name[i], command=lambda index=i: self.start_thread(botton_func[index]),
-                               width=self.button_width, height=1)
+            if len(func_args) > i:
+                button = tk.Button(self.root, text=botton_name[i], command=lambda index=i: self.start_thread(botton_func[index], func_args[index]),
+                                   width=self.button_width, height=1)
+            else:
+                button = tk.Button(self.root, text=botton_name[i], command=lambda index=i: self.start_thread(self.wrapper, botton_func[index]),
+                                   width=self.button_width, height=1)
+
             button.place(relx=0.5, y=self.y, anchor="center")
 
         self.y += self.gap * (5 - len(botton_name)) if len(botton_name)+1 < 5 else self.gap
@@ -67,6 +74,7 @@ class InterfaceBase:
     # 最下方文本框打印，便于提示
     def text_write(self, s):
         self.text_show.delete("1.0", tk.END)  # 1.0代表删除整份文件
+        self.text_show.update_idletasks()
         self.text_show.insert(tk.END, s)  # tk.END表示将字符串插入到文件末端位置
         self.text_show.tag_configure("center", justify="center")
         self.text_show.tag_add("center", "1.0", "end")
@@ -86,23 +94,40 @@ class InterfaceBase:
         with keyboard.Listener(on_press=is_esc) as listener:
             listener.join()
 
+    def a(self):
+        for i in range(100):
+            time.sleep(5)
+            if self.exit(): return
+
     # 进程控制，保证单线程执行
     def start_thread(self, func, *args, **kwargs):
-        if self.executing and func != self.stop_process:
+        if self.executing and args[0] != self.stop_process:
             self.text_write("请等待该进程结束或按下停止键")
             return
         t = threading.Thread(target=func, args=args, kwargs=kwargs)
         t.start()
 
+    def wrapper(self, func, *args, **kwargs):
+        print(threading.activeCount())
+        if func != self.stop_process:
+            self.executing = True
+            func(*args, **kwargs)
+            self.executing = False
+        else:
+            func(*args, **kwargs)
+
     # 按[ESC]或退出时，辅助进程控制变量
     def stop_process(self):
-        self.executing = False
-        self.need_close = True
+        if self.executing:
+            self.need_close = True
         self.text_write("已停止！！")
 
     # 自编按键程序中判断是否按下[ESC]或退出
     # 代码循环中插入 if self.exit(): return
-    def exit(self):
+    # 若if self.exit(1): return，指定t==1，代表延时1秒后判断是否按下退出，用于复杂步骤无法for循环判断
+    def exit(self, t=-1):
+        if t != -1:
+            time.sleep(t)
         if self.need_close:
             # self.text_write("正在退出~~")
             self.executing = False
@@ -110,3 +135,5 @@ class InterfaceBase:
             return True
         else:
             return False
+
+
