@@ -74,7 +74,7 @@ class Interface(InterfaceBase):
 
     def high(self):
         self.mouse.click([66, 1176])
-        if self.exit(1): return
+        if self.exit(2): return
         # 走到最右边，点击荒兽入侵
         if self.mouse.drag([336, 837], [390, 837], 15, self): return
         if self.exit(1): return

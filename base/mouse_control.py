@@ -52,23 +52,33 @@ class MouseBase:
         x, y = self.pos_shift(pos)
         pyautogui.moveTo(x, y)
 
-    def drag(self, pos1, pos2, t, instance):
+    def drag(self, instance, pos1, pos2, delay: int=-1, duration=-1):
         '''
-        鼠标拖拽，移动到 pos1 后鼠标按下，拖动到 pos2 后延时 t 秒松开，若 t == -1，则不松开
+        鼠标拖拽，移动到 pos1 后鼠标按下，拖动到 pos2 后延时 delay 秒松开，若 delay == -1，则不松开
         :param pos1:
         :param pos2:
-        :param t:
+        :param delay: 延时 t 秒松开，若 t == -1，则不松开
+        :param duration: 从 pos1 拖拽到 pos2 所需的时间（经过 duration 秒后拖过去），若 duration == -1，则瞬间拖过去
         :return:
         '''
         self.move(pos1)
         pyautogui.mouseDown()
-        self.move(pos2)
-        if t == -1:
+        if duration == -1:
+            self.move(pos2)
+        else:
+            min_shift_x = (pos2[0] - pos1[0]) / (10 * duration)
+            min_shift_y = (pos2[1] - pos1[1]) / (10 * duration)
+            for i in range(1, int(10 * duration) + 1):
+                x = pos1[0] + min_shift_x * i
+                y = pos1[1] + min_shift_y * i
+                self.move((x, y))
+
+        if delay == -1:
+            pyautogui.mouseUp()
             return
         # 0.5s检测频率，检测是否按下退出
-        for i in range(2 * t):
-            time.sleep(0.5)
-            if instance.exit():
+        for i in range(2 * delay):
+            if instance.exit(0.5):
                 pyautogui.mouseUp()
                 return True
         pyautogui.mouseUp()

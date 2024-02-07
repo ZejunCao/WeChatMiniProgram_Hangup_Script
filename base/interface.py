@@ -56,8 +56,8 @@ class InterfaceBase:
 
         for i in range(len(botton_name)):
             self.y += self.gap
-            if len(func_args) > i:
-                button = tk.Button(self.root, text=botton_name[i], command=lambda index=i: self.start_thread(botton_func[index], func_args[index]),
+            if len(func_args) > i and func_args[i] != '':
+                button = tk.Button(self.root, text=botton_name[i], command=lambda index=i: self.start_thread(self.wrapper, botton_func[index], func_args[index]),
                                    width=self.button_width, height=1)
             else:
                 button = tk.Button(self.root, text=botton_name[i], command=lambda index=i: self.start_thread(self.wrapper, botton_func[index]),
@@ -125,9 +125,13 @@ class InterfaceBase:
     # 自编按键程序中判断是否按下[ESC]或退出
     # 代码循环中插入 if self.exit(): return
     # 若if self.exit(1): return，指定t==1，代表延时1秒后判断是否按下退出，用于复杂步骤无法for循环判断
+    # TODO：延时很长时，文本窗口打印倒计时
     def exit(self, t=-1):
         if t != -1:
-            time.sleep(t)
+            while t > 0:
+                time.sleep(min(t, 1))
+                t -= 1
+                if self.exit(): return True
         if self.need_close:
             # self.text_write("正在退出~~")
             self.executing = False
@@ -136,4 +140,6 @@ class InterfaceBase:
         else:
             return False
 
-
+    # TODO: 动作集执行，传入位置（图片或坐标）和延时时间，for循环执行
+    def action_set_execute(self):
+        pass

@@ -26,8 +26,27 @@ class Config(ConfigBase):
     def __init__(self):
         super().__init__()
         self.img_map.update({
-            '通关棋盘文件夹': './imgs/2560+1600',
+            '进入主棋盘按钮': './imgs/2560+1600/main_chessboard_enter.png',
+            '广告资源': './imgs/2560+1600/adver_resource.png',
+            '广告能量': './imgs/2560+1600/adver_energy.png',
         })
+        self.pos_map = {
+            '会员档案': (618, 507),
+            '卡牌总数': (98, 1060),
+            '抽卡1': (470, 530),
+            '抽卡2': (470, 720),
+            '抽卡3': (470, 900),
+            '抽卡继续': (320, 1100),
+            '福利中心': (66, 450),
+            '免费礼物': (470, 250),
+            '广告观看键': (200, 1010),
+            '广告退出键': (606, 111),
+            '广告退出后好的键': (330, 910),
+            '进入主棋盘按钮': [[35, 1040], [120, 1130]],  # 此为截图使用，记录进入主棋盘按钮边框坐标
+            '广告资源': [[350, 350], [510, 460]],
+            '广告能量': [[350, 570], [510, 700]],
+            '免费礼物拖拽': [[330, 440], [330, 1000]]
+        }
 
 
 # 继承，用于特定任务的新函数创建
@@ -43,91 +62,77 @@ class Interface(InterfaceBase):
         super().__init__(self.mouse, self.config)
 
         title = '肥鹅健身房自动化脚本'
-        botton_name = ['点击自动看资源广告', '点击自动看能量广告']
-        botton_func = [self.advertisement]
-        func_args = ['广告资源', '广告能量']
+        botton_name = ['点击自动看资源广告', '点击自动看能量广告', '点击自动抽取卡牌']
+        botton_func = [self.advertisement, self.advertisement, self.draw_card]
+        func_args = ['广告资源', '广告能量', '']
         self.draw_windows(title=title, botton_name=botton_name, botton_func=botton_func, func_args=func_args)
         self.root.mainloop()
 
+    def is_main_screen(self):
+        max_val, max_loc = self.mouse.template_match(self.config.img_map['进入主棋盘按钮'])
+        if max_val < 0.8:
+            return False
+        return True
+
     def draw_card(self):
-        if not self.mouse.is_main_screen():
+        if not self.is_main_screen():
             self.text_write('请退回到主页面')
-            print('未在主页面')
             return
-        self.executing = True
         self.text_write('正在抽卡中!!!')
         # 放到动作集中，每个列表代表[点击位置，点击后延时时间]
         action_set = [
-            [pos_map['会员档案'], 1],
-            [pos_map['卡牌总数'], 1],
-            [pos_map['抽卡1'], 4],
-            [pos_map['抽卡继续'], 1],
+            [self.config.pos_map['会员档案'], 1],
+            [self.config.pos_map['卡牌总数'], 1],
+            [self.config.pos_map['抽卡1'], 4],
+            [self.config.pos_map['抽卡继续'], 1],
                       ]
         start = 0
         while True:
             for action in action_set[start:]:
-                print(action)
+                # print(action)
                 if start == 0:
                     start = 2
                 self.mouse.click(action[0])
-                time.sleep(action[1])
-                if self.exit(): return
+                if self.exit(action[1]): return
 
     def advertisement(self, kind):
         action_set = [
-            [pos_map['福利中心'], 1],
-            [pos_map['免费礼物'], 1],
+            [self.config.pos_map['福利中心'], 1],
+            [self.config.pos_map['免费礼物'], 1],
                       ]
         for action in action_set:
             self.mouse.click(action[0])
-            time.sleep(action[1])
-            if self.exit(): return
+            if self.exit(action[1]): return
 
-        if not os.path.exists(img_map['广告资源']) or not os.path.exists(img_map['广告能量']):
-            for _ in range(2):
-                pyautogui.moveTo(pos_map['免费礼物拖拽'][0])
-                pyautogui.mouseDown()
-                pyautogui.dragTo(pos_map['免费礼物拖拽'][1], duration=0.2)
-                pyautogui.mouseUp()
-            self.mouse.config.printscreen('广告资源', pos=self.mouse.pos)
-            self.mouse.config.printscreen('广告能量', pos=self.mouse.pos)
+        # if not os.path.exists(self.config.img_map['广告资源']) or not os.path.exists(self.config.img_map['广告能量']):
+        #     for _ in range(2):
+        #         self.mouse.drag(self, self.config.pos_map['免费礼物拖拽'][0], self.config.pos_map['免费礼物拖拽'][1], duration=0.2)
+        #     self.mouse.config.printscreen('广告资源', pos=self.mouse.pos)
+        #     self.mouse.config.printscreen('广告能量', pos=self.mouse.pos)
 
-        if kind == '广告资源':
-            img = ImageGrab.grab(self.mouse.pos)
-            max_val, max_loc = self.mouse.template_match(img_map['广告资源'], img)
-            if max_val < 0.8:
-                print(f'当前界面没有广告资源，max_val={max_val}')
-                return False
-            adver_w = pos_map['广告资源'][1][0] - pos_map['广告资源'][0][0]
-            adver_h = pos_map['广告资源'][1][1] - pos_map['广告资源'][0][1]
-            click_pos_x = max_loc[0] + adver_w // 2
-            click_pos_y = max_loc[1] + adver_h * 3 // 4
+        while True:
+            max_val, max_loc = self.mouse.template_match(self.config.img_map[kind])
+            if max_val < 0.9:
+                self.mouse.drag(self, self.config.pos_map['免费礼物拖拽'][0], self.config.pos_map['免费礼物拖拽'][1], delay=1, duration=0.2)
+                self.mouse.drag(self, self.config.pos_map['免费礼物拖拽'][0], self.config.pos_map['免费礼物拖拽'][1], delay=1, duration=0.2)
+                if self.exit(1): return
+                # print(f'当前界面没有广告资源，max_val={max_val}')
+            else:
+                break
+        adver_w = self.config.pos_map[kind][1][0] - self.config.pos_map[kind][0][0]
+        adver_h = self.config.pos_map[kind][1][1] - self.config.pos_map[kind][0][1]
+        click_pos_x = max_loc[0] + adver_w // 2
+        click_pos_y = max_loc[1] + adver_h * 3 // 4
+        for i in range(5):
             self.mouse.click([click_pos_x, click_pos_y])
-            time.sleep(0.5)
-            self.mouse.click(pos_map['广告观看键'])
+            if self.exit(0.5): return
+            self.mouse.click(self.config.pos_map['广告观看键'])
+            if self.exit(35): return
+            self.mouse.click(self.config.pos_map['广告退出键'])
+            if self.exit(2): return
+            self.mouse.click(self.config.pos_map['广告退出后好的键'])
+            if self.exit(2): return
 
-    def reward(self):
-        # 找到最新复制进去的图片
-        files = os.listdir(self.config.img_map['通关棋盘文件夹'])
-        files = [f for f in files if f not in ['full_screen.png', 'top_tab_bar.png']]
-        files.sort()
-        map_size = parse_img(os.path.join(self.config.img_map['通关棋盘文件夹'], files[-1]))
-        self.map = parse()
-        if self.map is None:
-            return
-        top_left = [131, 383]
-        bottom_right = [660, 917]
-        grid_size = (bottom_right[0] - top_left[0]) // map_size
-        pos = [0, 0]
-        for i in range(map_size):
-            for j in range(map_size):
-                if self.map[i][j] == 'o':
-                    pos[0] = top_left[0] + grid_size * j + grid_size // 2
-                    pos[1] = top_left[1] + grid_size * i + grid_size // 2
-                    self.mouse.click(pos)
-                    time.sleep(0.05)
-
-                    if self.exit(): return
 
 
 
